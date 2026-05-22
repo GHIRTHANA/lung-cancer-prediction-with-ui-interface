@@ -1,0 +1,141 @@
+from flask import Flask, request, render_template_string
+import pandas as pd
+import joblib
+
+app = Flask(__name__)
+
+# Load model
+model = joblib.load("lung_model.pkl")
+
+# Get exact feature names used during training
+model_features = list(model.feature_names_in_)
+print("Model Features:", model_features)
+
+html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lung Cancer Prediction</title>
+    <style>
+        body{
+            font-family: Arial;
+            background:#f4f4f4;
+            text-align:center;
+            padding:20px;
+        }
+
+        .container{
+            width:500px;
+            margin:auto;
+            background:white;
+            padding:20px;
+            border-radius:10px;
+            box-shadow:0px 0px 10px gray;
+        }
+
+        input{
+            width:90%;
+            padding:10px;
+            margin:8px;
+            border-radius:5px;
+            border:1px solid #ccc;
+        }
+
+        button{
+            background:green;
+            color:white;
+            padding:10px 20px;
+            border:none;
+            border-radius:5px;
+            cursor:pointer;
+        }
+
+        h3{
+            color:blue;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Lung Cancer Prediction</h2>
+
+    <form method="POST">
+
+        <input type="number" name="AGE" placeholder="Age" required>
+        <input type="number" name="SMOKING" placeholder="Smoking (0/1)" required>
+        <input type="number" name="YELLOW_FINGERS" placeholder="Yellow Fingers (0/1)" required>
+        <input type="number" name="ANXIETY" placeholder="Anxiety (0/1)" required>
+        <input type="number" name="PEER_PRESSURE" placeholder="Peer Pressure (0/1)" required>
+        <input type="number" name="CHRONIC_DISEASE" placeholder="Chronic Disease (0/1)" required>
+        <input type="number" name="FATIGUE" placeholder="Fatigue (0/1)" required>
+        <input type="number" name="ALLERGY" placeholder="Allergy (0/1)" required>
+        <input type="number" name="WHEEZING" placeholder="Wheezing (0/1)" required>
+        <input type="number" name="ALCOHOL_CONSUMING" placeholder="Alcohol Consuming (0/1)" required>
+        <input type="number" name="COUGHING" placeholder="Coughing (0/1)" required>
+        <input type="number" name="SHORTNESS_OF_BREATH" placeholder="Shortness of Breath (0/1)" required>
+        <input type="number" name="SWALLOWING_DIFFICULTY" placeholder="Swallowing Difficulty (0/1)" required>
+        <input type="number" name="CHEST_PAIN" placeholder="Chest Pain (0/1)" required>
+
+        <button type="submit">Predict</button>
+    </form>
+
+    {% if prediction %}
+        <h3>{{ prediction }}</h3>
+    {% endif %}
+
+</div>
+
+</body>
+</html>
+"""
+
+
+@app.route("/", methods=["GET", "POST"])
+def home():
+    prediction = ""
+
+    if request.method == "POST":
+        try:
+
+            # Input dictionary
+            form_data = {
+                "AGE": float(request.form["AGE"]),
+                "SMOKING": float(request.form["SMOKING"]),
+                "YELLOW_FINGERS": float(request.form["YELLOW_FINGERS"]),
+                "ANXIETY": float(request.form["ANXIETY"]),
+                "PEER_PRESSURE": float(request.form["PEER_PRESSURE"]),
+                "CHRONIC DISEASE": float(request.form["CHRONIC_DISEASE"]),
+                "FATIGUE ": float(request.form["FATIGUE"]),
+                "ALLERGY ": float(request.form["ALLERGY"]),
+                "WHEEZING": float(request.form["WHEEZING"]),
+                "ALCOHOL CONSUMING": float(request.form["ALCOHOL_CONSUMING"]),
+                "COUGHING": float(request.form["COUGHING"]),
+                "SHORTNESS OF BREATH": float(request.form["SHORTNESS_OF_BREATH"]),
+                "SWALLOWING DIFFICULTY": float(request.form["SWALLOWING_DIFFICULTY"]),
+                "CHEST PAIN": float(request.form["CHEST_PAIN"])
+            }
+
+            # Create dataframe using EXACT model features
+            row = {}
+
+            for feature in model_features:
+                row[feature] = form_data.get(feature, 0)
+
+            df = pd.DataFrame([row])
+
+            result = model.predict(df)[0]
+
+            if result == 1:
+                prediction = "⚠ High Chance of Lung Cancer"
+            else:
+                prediction = "✅ Low Chance of Lung Cancer"
+
+        except Exception as e:
+            prediction = f"Error: {e}"
+
+    return render_template_string(html, prediction=prediction)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
